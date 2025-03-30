@@ -1,9 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178 d17.12
+VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagementService", "TaskManagementService\TaskManagementService.csproj", "{70828B89-6139-4EB8-ABEF-58B19D27FD74}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0E4FCE76-038F-40B9-B640-7CEA3843C291}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Domain", "TaskManagement.Domain\TaskManagement.Domain.csproj", "{C85F0957-4410-4ECB-A191-48BF8CE59BB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Application", "TaskManagement.Application\TaskManagement.Application.csproj", "{1BB6FBA5-5794-4C60-AEB6-FCD829DCCE53}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Infrastructure", "TaskManagement.Infrastructure\TaskManagement.Infrastructure.csproj", "{C74A1F2C-6930-4EDB-8EAB-5F214572DC56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Api", "TaskManagement.Api\TaskManagement.Api.csproj", "{11ED69F9-4EA8-4283-93FB-0FD422AC4C6A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.MessageConsumer", "TaskManagement.MessageConsumer\TaskManagement.MessageConsumer.csproj", "{E9DDB33D-AD0A-4C70-9F7A-0AD8C4C511C6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,12 +21,35 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{70828B89-6139-4EB8-ABEF-58B19D27FD74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70828B89-6139-4EB8-ABEF-58B19D27FD74}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70828B89-6139-4EB8-ABEF-58B19D27FD74}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70828B89-6139-4EB8-ABEF-58B19D27FD74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C85F0957-4410-4ECB-A191-48BF8CE59BB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C85F0957-4410-4ECB-A191-48BF8CE59BB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C85F0957-4410-4ECB-A191-48BF8CE59BB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C85F0957-4410-4ECB-A191-48BF8CE59BB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BB6FBA5-5794-4C60-AEB6-FCD829DCCE53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BB6FBA5-5794-4C60-AEB6-FCD829DCCE53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BB6FBA5-5794-4C60-AEB6-FCD829DCCE53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BB6FBA5-5794-4C60-AEB6-FCD829DCCE53}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C74A1F2C-6930-4EDB-8EAB-5F214572DC56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C74A1F2C-6930-4EDB-8EAB-5F214572DC56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C74A1F2C-6930-4EDB-8EAB-5F214572DC56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C74A1F2C-6930-4EDB-8EAB-5F214572DC56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11ED69F9-4EA8-4283-93FB-0FD422AC4C6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11ED69F9-4EA8-4283-93FB-0FD422AC4C6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11ED69F9-4EA8-4283-93FB-0FD422AC4C6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11ED69F9-4EA8-4283-93FB-0FD422AC4C6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9DDB33D-AD0A-4C70-9F7A-0AD8C4C511C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9DDB33D-AD0A-4C70-9F7A-0AD8C4C511C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9DDB33D-AD0A-4C70-9F7A-0AD8C4C511C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9DDB33D-AD0A-4C70-9F7A-0AD8C4C511C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C85F0957-4410-4ECB-A191-48BF8CE59BB9} = {0E4FCE76-038F-40B9-B640-7CEA3843C291}
+		{1BB6FBA5-5794-4C60-AEB6-FCD829DCCE53} = {0E4FCE76-038F-40B9-B640-7CEA3843C291}
+		{C74A1F2C-6930-4EDB-8EAB-5F214572DC56} = {0E4FCE76-038F-40B9-B640-7CEA3843C291}
+		{11ED69F9-4EA8-4283-93FB-0FD422AC4C6A} = {0E4FCE76-038F-40B9-B640-7CEA3843C291}
+		{E9DDB33D-AD0A-4C70-9F7A-0AD8C4C511C6} = {0E4FCE76-038F-40B9-B640-7CEA3843C291}
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TaskManagement.MessageConsumer": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

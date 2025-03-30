@@ -1,4 +1,4 @@
-namespace TaskManagementService
+namespace TaskManagement.Api
 {
     public class WeatherForecast
     {
