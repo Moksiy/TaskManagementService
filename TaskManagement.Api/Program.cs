@@ -9,7 +9,6 @@ using TaskManagement.Infrastructure.Data.Repositories;
 using TaskManagement.Application.Services.Interfaces;
 using TaskManagement.Infrastructure.Data.Context;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
-using Microsoft.Extensions.Configuration;
 using AutoMapper;
 using TaskManagement.Application.DTOs.Mapping;
 

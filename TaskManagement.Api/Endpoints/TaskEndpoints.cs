@@ -1,7 +1,6 @@
 ﻿using TaskManagement.Application.Services.Interfaces;
 using TaskManagement.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OpenApi;
 
 namespace TaskManagement.Api.Endpoints
 {
