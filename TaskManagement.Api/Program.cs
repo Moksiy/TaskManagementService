@@ -105,7 +105,8 @@ if (app.Environment.IsDevelopment())
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<TaskManagementDbContext>();
-        dbContext.Database.EnsureCreated();
+        //dbContext.Database.EnsureCreated();
+        dbContext.Database.Migrate();
     }
 }
 

@@ -30,6 +30,8 @@ namespace TaskManagement.Infrastructure.Data.Context
 
             modelBuilder.Entity<Domain.Entities.Task>(entity =>
             {
+                entity.ToTable("Tasks");
+
                 entity.HasKey(e => e.Id);
 
                 entity.Property(e => e.Title)
@@ -41,7 +43,7 @@ namespace TaskManagement.Infrastructure.Data.Context
 
                 entity.Property(e => e.Status)
                       .IsRequired()
-                      .HasConversion<string>();
+                      .HasConversion<int>();
 
                 entity.Property(e => e.CreatedAt)
                       .IsRequired();
