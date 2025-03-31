@@ -1,9 +1,11 @@
-﻿using MassTransit;
+﻿using FluentValidation;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TaskManagement.Api.Endpoints;
+using TaskManagement.Api.Middleware;
 using TaskManagement.Application.Services;
 using TaskManagement.Infrastructure.Data.Repositories;
 using TaskManagement.Application.Services.Interfaces;
@@ -11,6 +13,8 @@ using TaskManagement.Infrastructure.Data.Context;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
 using AutoMapper;
 using TaskManagement.Application.DTOs.Mapping;
+using TaskManagement.Application.DTOs;
+using TaskManagement.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +43,10 @@ services.AddDbContext<TaskManagementDbContext>(options =>
 
 services.AddScoped<ITaskRepository, TaskRepository>();
 services.AddScoped<ITaskService, TaskService>();
+
+// Register validators
+services.AddScoped<IValidator<CreateTaskDto>, CreateTaskDtoValidator>();
+services.AddScoped<IValidator<UpdateTaskDto>, UpdateTaskDtoValidator>();
 
 services.AddMassTransit(config =>
 {
@@ -102,6 +110,9 @@ services.AddSingleton(mapper);
 
 var app = builder.Build();
 
+// Add error handling middleware
+app.UseErrorHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -110,7 +121,6 @@ if (app.Environment.IsDevelopment())
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<TaskManagementDbContext>();
-        //dbContext.Database.EnsureCreated();
         dbContext.Database.Migrate();
     }
 }

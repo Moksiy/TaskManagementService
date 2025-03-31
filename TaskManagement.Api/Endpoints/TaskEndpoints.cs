@@ -1,6 +1,7 @@
 ﻿using TaskManagement.Application.Services.Interfaces;
 using TaskManagement.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
+using FluentValidation;
 
 namespace TaskManagement.Api.Endpoints
 {
@@ -15,23 +16,29 @@ namespace TaskManagement.Api.Endpoints
         /// <param name="app">Web application instance to configure routes</param>
         public void Configure(WebApplication app)
         {
-            app.MapGet("~/api/tasks", GetAllTasks)
+            app.MapGet("/api/tasks", GetAllTasks)
                 .WithName("GetAllTasks")
                 .WithOpenApi()
                 .WithTags("Tasks");
-            app.MapGet("~/api/tasks/{id}", GetTaskById)
+
+            app.MapGet("/api/tasks/{id}", GetTaskById)
                 .WithName("GetTaskById")
                 .WithOpenApi()
                 .WithTags("Tasks");
-            app.MapPost("~/api/tasks", CreateTask)
+
+            app.MapPost("/api/tasks", CreateTask)
                 .WithName("CreateTask")
                 .WithOpenApi()
-                .WithTags("Tasks");
-            app.MapPut("~/api/tasks/{id}", UpdateTask)
+                .WithTags("Tasks")
+                .AddEndpointFilter<ValidationFilter<CreateTaskDto>>();
+
+            app.MapPut("/api/tasks/{id}", UpdateTask)
                 .WithName("UpdateTask")
                 .WithOpenApi()
-                .WithTags("Tasks");
-            app.MapDelete("~/api/tasks/{id}", DeleteTask)
+                .WithTags("Tasks")
+                .AddEndpointFilter<ValidationFilter<UpdateTaskDto>>();
+
+            app.MapDelete("/api/tasks/{id}", DeleteTask)
                 .WithName("DeleteTask")
                 .WithOpenApi()
                 .WithTags("Tasks");
@@ -40,11 +47,9 @@ namespace TaskManagement.Api.Endpoints
         /// <summary>
         /// Retrieves a list of all tasks
         /// </summary>
-        /// <param name="httpContext">HTTP request context</param>
         /// <param name="taskService">Task management service</param>
         /// <returns>List of all tasks or an error if the operation fails</returns>
         private async Task<IResult> GetAllTasks(
-            HttpContext httpContext,
             [FromServices] ITaskService taskService)
         {
             var tasks = await taskService.GetAllTasksAsync();
@@ -54,12 +59,10 @@ namespace TaskManagement.Api.Endpoints
         /// <summary>
         /// Retrieves a task by its identifier
         /// </summary>
-        /// <param name="httpContext">HTTP request context</param>
         /// <param name="id">Task identifier</param>
         /// <param name="taskService">Task management service</param>
         /// <returns>Task with the specified identifier or 404 if not found</returns>
         private async Task<IResult> GetTaskById(
-            HttpContext httpContext,
             Guid id,
             [FromServices] ITaskService taskService)
         {
@@ -70,12 +73,10 @@ namespace TaskManagement.Api.Endpoints
         /// <summary>
         /// Creates a new task
         /// </summary>
-        /// <param name="httpContext">HTTP request context</param>
         /// <param name="createTaskDto">Task creation data</param>
         /// <param name="taskService">Task management service</param>
         /// <returns>Created task with status code 201 or an error if the operation fails</returns>
         private async Task<IResult> CreateTask(
-            HttpContext httpContext,
             [FromBody] CreateTaskDto createTaskDto,
             [FromServices] ITaskService taskService)
         {
@@ -86,13 +87,11 @@ namespace TaskManagement.Api.Endpoints
         /// <summary>
         /// Updates an existing task
         /// </summary>
-        /// <param name="httpContext">HTTP request context</param>
         /// <param name="id">Task identifier</param>
         /// <param name="updateTaskDto">Task update data</param>
         /// <param name="taskService">Task management service</param>
         /// <returns>Updated task or 404 if the task is not found</returns>
         private async Task<IResult> UpdateTask(
-            HttpContext httpContext,
             Guid id,
             [FromBody] UpdateTaskDto updateTaskDto,
             [FromServices] ITaskService taskService)
@@ -104,12 +103,10 @@ namespace TaskManagement.Api.Endpoints
         /// <summary>
         /// Deletes a task by its identifier
         /// </summary>
-        /// <param name="httpContext">HTTP request context</param>
         /// <param name="id">Task identifier</param>
         /// <param name="taskService">Task management service</param>
         /// <returns>Status code 204 (No Content) if successful or 404 if the task is not found</returns>
         private async Task<IResult> DeleteTask(
-            HttpContext httpContext,
             Guid id,
             [FromServices] ITaskService taskService)
         {
