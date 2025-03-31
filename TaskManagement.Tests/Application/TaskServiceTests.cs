@@ -1,7 +1,9 @@
-﻿using MassTransit;
+﻿using AutoMapper;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TaskManagement.Application.DTOs;
+using TaskManagement.Application.DTOs.Mapping;
 using TaskManagement.Application.Services;
 using TaskManagement.Domain.Events;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
@@ -15,17 +17,23 @@ namespace TaskManagement.Tests.Application
         private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
         private readonly Mock<ILogger<TaskService>> _mockLogger;
         private readonly TaskService _taskService;
+        private readonly IMapper _mapper;
 
         public TaskServiceTests()
         {
             _mockTaskRepository = new Mock<ITaskRepository>();
             _mockPublishEndpoint = new Mock<IPublishEndpoint>();
             _mockLogger = new Mock<ILogger<TaskService>>();
+            _mapper = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<TaskMappingProfile>();
+            }).CreateMapper();
 
             _taskService = new TaskService(
                 _mockTaskRepository.Object,
                 _mockPublishEndpoint.Object,
-                _mockLogger.Object);
+                _mockLogger.Object,
+                _mapper);
         }
 
         [Fact]

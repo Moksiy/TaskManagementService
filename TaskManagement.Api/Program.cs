@@ -10,6 +10,8 @@ using TaskManagement.Application.Services.Interfaces;
 using TaskManagement.Infrastructure.Data.Context;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
 using Microsoft.Extensions.Configuration;
+using AutoMapper;
+using TaskManagement.Application.DTOs.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,6 +92,14 @@ services.AddCors(options =>
                .AllowAnyHeader();
     });
 });
+
+var mapperConfig = new MapperConfiguration(mc =>
+{
+    mc.AddProfile(new TaskMappingProfile());
+});
+
+IMapper mapper = mapperConfig.CreateMapper();
+services.AddSingleton(mapper);
 
 var app = builder.Build();
 

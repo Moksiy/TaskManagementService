@@ -1,4 +1,5 @@
-﻿using MassTransit;
+﻿using AutoMapper;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Application.Services.Interfaces;
@@ -16,6 +17,7 @@ namespace TaskManagement.Application.Services
         private readonly ITaskRepository _taskRepository;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly ILogger<TaskService> _logger;
+        private readonly IMapper _mapper;
 
         /// <summary>
         /// Creates a new TaskService
@@ -26,11 +28,13 @@ namespace TaskManagement.Application.Services
         public TaskService(
             ITaskRepository taskRepository,
             IPublishEndpoint publishEndpoint,
-            ILogger<TaskService> logger)
+            ILogger<TaskService> logger,
+            IMapper mapper)
         {
             _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
             _publishEndpoint = publishEndpoint ?? throw new ArgumentNullException(nameof(publishEndpoint));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
         /// <inheritdoc />
@@ -38,7 +42,7 @@ namespace TaskManagement.Application.Services
         {
             _logger.LogInformation("Getting all tasks");
             var tasks = await _taskRepository.GetAllAsync();
-            return tasks.Select(MapToDto);
+            return _mapper.Map<IEnumerable<TaskDto>>(tasks);
         }
 
         /// <inheritdoc />
@@ -46,7 +50,7 @@ namespace TaskManagement.Application.Services
         {
             _logger.LogInformation("Getting task with ID: {TaskId}", id);
             var task = await _taskRepository.GetByIdAsync(id);
-            return task != null ? MapToDto(task) : null;
+            return  _mapper.Map<TaskDto>(task);
         }
 
         /// <inheritdoc />
@@ -63,8 +67,7 @@ namespace TaskManagement.Application.Services
                 task.Title,
                 task.Description
             ));
-
-            return MapToDto(task);
+            return _mapper.Map<TaskDto>(task);
         }
 
         /// <inheritdoc />
@@ -105,8 +108,7 @@ namespace TaskManagement.Application.Services
                 task.Description,
                 task.Status
             ));
-
-            return MapToDto(task);
+            return _mapper.Map<TaskDto>(task);
         }
 
         /// <inheritdoc />
@@ -127,19 +129,6 @@ namespace TaskManagement.Application.Services
             await _publishEndpoint.Publish(new TaskDeletedEvent(id));
 
             return true;
-        }
-
-        private static TaskDto MapToDto(Domain.Entities.Task task)
-        {
-            return new TaskDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                Status = task.Status.ToString(),
-                CreatedAt = task.CreatedAt,
-                UpdatedAt = task.UpdatedAt
-            };
         }
     }
 }
