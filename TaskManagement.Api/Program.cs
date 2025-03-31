@@ -32,10 +32,6 @@ var rabbitMqPassword = builder.Configuration["RABBITMQ_PASSWORD"] ?? "guest";
 // Construct connection string from environment variables
 var connectionString = $"Host={postgresHost};Port={postgresPort};Database={postgresDb};Username={postgresUser};Password={postgresPassword}";
 
-// Log connection info (for debugging, remove in production or use trace level)
-Console.WriteLine($"PostgreSQL Connection: Host={postgresHost}, Port={postgresPort}, Database={postgresDb}, User={postgresUser}");
-Console.WriteLine($"RabbitMQ Connection: Host={rabbitMqHost}, User={rabbitMqUser}");
-
 // Configure services
 services.AddDbContext<TaskManagementDbContext>(options =>
     options.UseNpgsql(connectionString));
