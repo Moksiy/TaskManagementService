@@ -24,8 +24,8 @@ services:
     image: rabbitmq:3-management
     container_name: taskmanagement_rabbitmq
     ports:
-      - "5672:5672"  
-      - "15672:15672"
+      - "5672:5672"
+      - "15672:15672" 
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -39,8 +39,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: TaskManagement.Api/Dockerfile
     container_name: taskmanagement_api
     depends_on:
       postgres:
@@ -65,8 +65,8 @@ services:
 
   message-consumer:
     build:
-      context: .
-      dockerfile: Dockerfile.Consumer
+      context: ./
+      dockerfile: TaskManagement.MessageConsumer/Dockerfile
     container_name: taskmanagement_consumer
     depends_on:
       rabbitmq:
