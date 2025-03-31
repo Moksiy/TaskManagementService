@@ -36,7 +36,7 @@ namespace TaskManagement.Tests.Infrastructure
             using (var context = new TaskManagementDbContext(options))
             {
                 var repository = new TaskRepository(context, mockLogger.Object);
-                var tasks = await repository.GetAllAsync();
+                var tasks = await repository.GetAllAsync(CancellationToken.None);
 
                 // Assert
                 Assert.Equal(2, tasks.Count());
@@ -67,7 +67,7 @@ namespace TaskManagement.Tests.Infrastructure
             using (var context = new TaskManagementDbContext(options))
             {
                 var repository = new TaskRepository(context, mockLogger.Object);
-                var result = await repository.GetByIdAsync(taskId);
+                var result = await repository.GetByIdAsync(taskId, CancellationToken.None);
 
                 // Assert
                 Assert.NotNull(result);
@@ -88,7 +88,7 @@ namespace TaskManagement.Tests.Infrastructure
             using (var context = new TaskManagementDbContext(options))
             {
                 var repository = new TaskRepository(context, mockLogger.Object);
-                var result = await repository.GetByIdAsync(nonExistingId);
+                var result = await repository.GetByIdAsync(nonExistingId, CancellationToken.None);
 
                 // Assert
                 Assert.Null(result);
@@ -107,7 +107,7 @@ namespace TaskManagement.Tests.Infrastructure
             using (var context = new TaskManagementDbContext(options))
             {
                 var repository = new TaskRepository(context, mockLogger.Object);
-                await repository.AddAsync(task);
+                await repository.AddAsync(task, CancellationToken.None);
             }
 
             // Assert
@@ -144,7 +144,7 @@ namespace TaskManagement.Tests.Infrastructure
             using (var context = new TaskManagementDbContext(options))
             {
                 var repository = new TaskRepository(context, mockLogger.Object);
-                await repository.UpdateAsync(task);
+                await repository.UpdateAsync(task, CancellationToken.None);
             }
 
             // Assert
@@ -180,7 +180,7 @@ namespace TaskManagement.Tests.Infrastructure
             using (var context = new TaskManagementDbContext(options))
             {
                 var repository = new TaskRepository(context, mockLogger.Object);
-                await repository.DeleteAsync(taskId);
+                await repository.DeleteAsync(taskId, CancellationToken.None);
             }
 
             // Assert
@@ -204,7 +204,66 @@ namespace TaskManagement.Tests.Infrastructure
                 var repository = new TaskRepository(context, mockLogger.Object);
 
                 // Should not throw exception
-                await repository.DeleteAsync(nonExistingId);
+                await repository.DeleteAsync(nonExistingId, CancellationToken.None);
+            }
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WithCancelledToken_ShouldThrowCancellationException()
+        {
+            // Arrange
+            var options = CreateNewContextOptions();
+            var mockLogger = new Mock<ILogger<TaskRepository>>();
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel(); // Cancel the token immediately
+
+            // Act & Assert
+            using (var context = new TaskManagementDbContext(options))
+            {
+                var repository = new TaskRepository(context, mockLogger.Object);
+
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+                    await repository.GetAllAsync(cancellationTokenSource.Token));
+            }
+        }
+
+        [Fact]
+        public async Task GetByIdAsync_WithCancelledToken_ShouldThrowCancellationException()
+        {
+            // Arrange
+            var options = CreateNewContextOptions();
+            var mockLogger = new Mock<ILogger<TaskRepository>>();
+            var taskId = Guid.NewGuid();
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel(); // Cancel the token immediately
+
+            // Act & Assert
+            using (var context = new TaskManagementDbContext(options))
+            {
+                var repository = new TaskRepository(context, mockLogger.Object);
+
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+                    await repository.GetByIdAsync(taskId, cancellationTokenSource.Token));
+            }
+        }
+
+        [Fact]
+        public async Task AddAsync_WithCancelledToken_ShouldThrowCancellationException()
+        {
+            // Arrange
+            var options = CreateNewContextOptions();
+            var mockLogger = new Mock<ILogger<TaskRepository>>();
+            var task = new Domain.Entities.Task("New Task", "New Description");
+            var cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel(); // Cancel the token immediately
+
+            // Act & Assert
+            using (var context = new TaskManagementDbContext(options))
+            {
+                var repository = new TaskRepository(context, mockLogger.Object);
+
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+                    await repository.AddAsync(task, cancellationTokenSource.Token));
             }
         }
     }

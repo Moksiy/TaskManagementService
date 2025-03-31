@@ -48,11 +48,13 @@ namespace TaskManagement.Api.Endpoints
         /// Retrieves a list of all tasks
         /// </summary>
         /// <param name="taskService">Task management service</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>List of all tasks or an error if the operation fails</returns>
         private async Task<IResult> GetAllTasks(
-            [FromServices] ITaskService taskService)
+            [FromServices] ITaskService taskService,
+            CancellationToken cancellationToken)
         {
-            var tasks = await taskService.GetAllTasksAsync();
+            var tasks = await taskService.GetAllTasksAsync(cancellationToken);
             return Results.Ok(tasks);
         }
 
@@ -61,12 +63,14 @@ namespace TaskManagement.Api.Endpoints
         /// </summary>
         /// <param name="id">Task identifier</param>
         /// <param name="taskService">Task management service</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task with the specified identifier or 404 if not found</returns>
         private async Task<IResult> GetTaskById(
             Guid id,
-            [FromServices] ITaskService taskService)
+            [FromServices] ITaskService taskService,
+            CancellationToken cancellationToken)
         {
-            var task = await taskService.GetTaskByIdAsync(id);
+            var task = await taskService.GetTaskByIdAsync(id, cancellationToken);
             return task != null ? Results.Ok(task) : Results.NotFound();
         }
 
@@ -75,12 +79,14 @@ namespace TaskManagement.Api.Endpoints
         /// </summary>
         /// <param name="createTaskDto">Task creation data</param>
         /// <param name="taskService">Task management service</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Created task with status code 201 or an error if the operation fails</returns>
         private async Task<IResult> CreateTask(
             [FromBody] CreateTaskDto createTaskDto,
-            [FromServices] ITaskService taskService)
+            [FromServices] ITaskService taskService,
+            CancellationToken cancellationToken)
         {
-            var task = await taskService.CreateTaskAsync(createTaskDto);
+            var task = await taskService.CreateTaskAsync(createTaskDto, cancellationToken);
             return Results.Created($"/api/tasks/{task.Id}", task);
         }
 
@@ -90,13 +96,15 @@ namespace TaskManagement.Api.Endpoints
         /// <param name="id">Task identifier</param>
         /// <param name="updateTaskDto">Task update data</param>
         /// <param name="taskService">Task management service</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Updated task or 404 if the task is not found</returns>
         private async Task<IResult> UpdateTask(
             Guid id,
             [FromBody] UpdateTaskDto updateTaskDto,
-            [FromServices] ITaskService taskService)
+            [FromServices] ITaskService taskService,
+            CancellationToken cancellationToken)
         {
-            var task = await taskService.UpdateTaskAsync(id, updateTaskDto);
+            var task = await taskService.UpdateTaskAsync(id, updateTaskDto, cancellationToken);
             return task != null ? Results.Ok(task) : Results.NotFound();
         }
 
@@ -105,12 +113,14 @@ namespace TaskManagement.Api.Endpoints
         /// </summary>
         /// <param name="id">Task identifier</param>
         /// <param name="taskService">Task management service</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Status code 204 (No Content) if successful or 404 if the task is not found</returns>
         private async Task<IResult> DeleteTask(
             Guid id,
-            [FromServices] ITaskService taskService)
+            [FromServices] ITaskService taskService,
+            CancellationToken cancellationToken)
         {
-            var result = await taskService.DeleteTaskAsync(id);
+            var result = await taskService.DeleteTaskAsync(id, cancellationToken);
             return result ? Results.NoContent() : Results.NotFound();
         }
     }

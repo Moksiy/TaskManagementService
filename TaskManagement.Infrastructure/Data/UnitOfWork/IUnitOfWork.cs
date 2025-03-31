@@ -17,25 +17,29 @@ namespace TaskManagement.Infrastructure.Data.UnitOfWork
         /// <summary>
         /// Begins a new transaction
         /// </summary>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task representing the asynchronous operation</returns>
-        Task BeginTransactionAsync();
+        Task BeginTransactionAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Commits all changes made within the current transaction
         /// </summary>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task representing the asynchronous operation</returns>
-        Task CommitTransactionAsync();
+        Task CommitTransactionAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Rolls back all changes made within the current transaction
         /// </summary>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task representing the asynchronous operation</returns>
-        Task RollbackTransactionAsync();
+        Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Saves all pending changes to the database
         /// </summary>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task representing the asynchronous operation</returns>
-        Task<int> SaveChangesAsync();
+        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

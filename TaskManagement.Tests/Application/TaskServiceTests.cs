@@ -22,6 +22,7 @@ namespace TaskManagement.Tests.Application
         private readonly Mock<ILogger<TaskService>> _mockLogger;
         private readonly TaskService _taskService;
         private readonly IMapper _mapper;
+        private readonly CancellationToken _cancellationToken = CancellationToken.None;
 
         public TaskServiceTests()
         {
@@ -55,11 +56,11 @@ namespace TaskManagement.Tests.Application
                 new Domain.Entities.Task("Test Task 2", "Description 2")
             };
 
-            _mockTaskRepository.Setup(repo => repo.GetAllAsync())
+            _mockTaskRepository.Setup(repo => repo.GetAllAsync(_cancellationToken))
                 .ReturnsAsync(testTasks);
 
             // Act
-            var result = await _taskService.GetAllTasksAsync();
+            var result = await _taskService.GetAllTasksAsync(_cancellationToken);
 
             // Assert
             Assert.Equal(2, result.Count());
@@ -74,11 +75,11 @@ namespace TaskManagement.Tests.Application
             var taskId = Guid.NewGuid();
             var testTask = new Domain.Entities.Task("Test Task", "Description");
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync(testTask);
 
             // Act
-            var result = await _taskService.GetTaskByIdAsync(taskId);
+            var result = await _taskService.GetTaskByIdAsync(taskId, _cancellationToken);
 
             // Assert
             Assert.NotNull(result);
@@ -93,7 +94,7 @@ namespace TaskManagement.Tests.Application
             var taskId = Guid.Empty;
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.GetTaskByIdAsync(taskId));
+            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.GetTaskByIdAsync(taskId, _cancellationToken));
         }
 
         [Fact]
@@ -102,11 +103,11 @@ namespace TaskManagement.Tests.Application
             // Arrange
             var taskId = Guid.NewGuid();
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync((Domain.Entities.Task)null);
 
             // Act
-            var result = await _taskService.GetTaskByIdAsync(taskId);
+            var result = await _taskService.GetTaskByIdAsync(taskId, _cancellationToken);
 
             // Assert
             Assert.Null(result);
@@ -123,28 +124,28 @@ namespace TaskManagement.Tests.Application
             };
 
             Domain.Entities.Task savedTask = null;
-            _mockTaskRepository.Setup(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>()))
-                .Callback<Domain.Entities.Task>(task => savedTask = task)
+            _mockTaskRepository.Setup(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken))
+                .Callback<Domain.Entities.Task, CancellationToken>((task, ct) => savedTask = task)
                 .Returns(Task.CompletedTask);
 
             // Act
-            var result = await _taskService.CreateTaskAsync(createTaskDto);
+            var result = await _taskService.CreateTaskAsync(createTaskDto, _cancellationToken);
 
             // Assert
             Assert.NotNull(result);
             Assert.Equal(createTaskDto.Title, result.Title);
             Assert.Equal(createTaskDto.Description, result.Description);
 
-            _mockTaskRepository.Verify(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>()), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Once);
+            _mockTaskRepository.Verify(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Once);
 
             _mockPublishEndpoint.Verify(pub => pub.Publish(
                 It.Is<TaskCreatedEvent>(e =>
                     e.Title == createTaskDto.Title &&
                     e.Description == createTaskDto.Description),
-                default),
+                _cancellationToken),
                 Times.Once);
         }
 
@@ -152,7 +153,7 @@ namespace TaskManagement.Tests.Application
         public async Task CreateTaskAsync_WithNullDto_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _taskService.CreateTaskAsync(null));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _taskService.CreateTaskAsync(null, _cancellationToken));
         }
 
         [Fact]
@@ -166,7 +167,7 @@ namespace TaskManagement.Tests.Application
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ValidationException>(() => _taskService.CreateTaskAsync(createTaskDto));
+            await Assert.ThrowsAsync<ValidationException>(() => _taskService.CreateTaskAsync(createTaskDto, _cancellationToken));
         }
 
         [Fact]
@@ -179,15 +180,15 @@ namespace TaskManagement.Tests.Application
                 Description = "New Description"
             };
 
-            _mockTaskRepository.Setup(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>()))
+            _mockTaskRepository.Setup(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken))
                 .ThrowsAsync(new Exception("Database error"));
 
             // Act & Assert
-            await Assert.ThrowsAsync<ServiceException>(() => _taskService.CreateTaskAsync(createTaskDto));
+            await Assert.ThrowsAsync<ServiceException>(() => _taskService.CreateTaskAsync(createTaskDto, _cancellationToken));
 
-            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Never);
         }
 
         [Fact]
@@ -204,14 +205,14 @@ namespace TaskManagement.Tests.Application
 
             var existingTask = new Domain.Entities.Task("Original Task", "Original Description");
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync(existingTask);
 
-            _mockTaskRepository.Setup(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()))
+            _mockTaskRepository.Setup(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken))
                 .Returns(Task.CompletedTask);
 
             // Act
-            var result = await _taskService.UpdateTaskAsync(taskId, updateTaskDto);
+            var result = await _taskService.UpdateTaskAsync(taskId, updateTaskDto, _cancellationToken);
 
             // Assert
             Assert.NotNull(result);
@@ -219,14 +220,14 @@ namespace TaskManagement.Tests.Application
             Assert.Equal(updateTaskDto.Description, result.Description);
             Assert.Equal(updateTaskDto.Status, result.Status);
 
-            _mockTaskRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Once);
+            _mockTaskRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Once);
 
             _mockPublishEndpoint.Verify(pub => pub.Publish(
                 It.IsAny<TaskUpdatedEvent>(),
-                default),
+                _cancellationToken),
                 Times.Once);
         }
 
@@ -240,7 +241,7 @@ namespace TaskManagement.Tests.Application
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.UpdateTaskAsync(Guid.Empty, updateTaskDto));
+            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.UpdateTaskAsync(Guid.Empty, updateTaskDto, _cancellationToken));
         }
 
         [Fact]
@@ -250,7 +251,7 @@ namespace TaskManagement.Tests.Application
             var taskId = Guid.NewGuid();
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _taskService.UpdateTaskAsync(taskId, null));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _taskService.UpdateTaskAsync(taskId, null, _cancellationToken));
         }
 
         [Fact]
@@ -265,18 +266,18 @@ namespace TaskManagement.Tests.Application
                 Status = "Completed"
             };
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync((Domain.Entities.Task)null);
 
             // Act
-            var result = await _taskService.UpdateTaskAsync(taskId, updateTaskDto);
+            var result = await _taskService.UpdateTaskAsync(taskId, updateTaskDto, _cancellationToken);
 
             // Assert
             Assert.Null(result);
 
-            _mockTaskRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()), Times.Never);
-            _mockPublishEndpoint.Verify(pub => pub.Publish(It.IsAny<TaskUpdatedEvent>(), default), Times.Never);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+            _mockTaskRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken), Times.Never);
+            _mockPublishEndpoint.Verify(pub => pub.Publish(It.IsAny<TaskUpdatedEvent>(), _cancellationToken), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Never);
         }
 
         [Fact]
@@ -293,18 +294,18 @@ namespace TaskManagement.Tests.Application
 
             var existingTask = new Domain.Entities.Task("Original Task", "Original Description");
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync(existingTask);
 
-            _mockTaskRepository.Setup(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()))
+            _mockTaskRepository.Setup(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>(), _cancellationToken))
                 .ThrowsAsync(new Exception("Database error"));
 
             // Act & Assert
-            await Assert.ThrowsAsync<ServiceException>(() => _taskService.UpdateTaskAsync(taskId, updateTaskDto));
+            await Assert.ThrowsAsync<ServiceException>(() => _taskService.UpdateTaskAsync(taskId, updateTaskDto, _cancellationToken));
 
-            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Never);
         }
 
         [Fact]
@@ -314,26 +315,26 @@ namespace TaskManagement.Tests.Application
             var taskId = Guid.NewGuid();
             var existingTask = new Domain.Entities.Task("Test Task", "Description");
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync(existingTask);
 
-            _mockTaskRepository.Setup(repo => repo.DeleteAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.DeleteAsync(taskId, _cancellationToken))
                 .Returns(Task.CompletedTask);
 
             // Act
-            var result = await _taskService.DeleteTaskAsync(taskId);
+            var result = await _taskService.DeleteTaskAsync(taskId, _cancellationToken);
 
             // Assert
             Assert.True(result);
 
-            _mockTaskRepository.Verify(repo => repo.DeleteAsync(taskId), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Once);
+            _mockTaskRepository.Verify(repo => repo.DeleteAsync(taskId, _cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Once);
 
             _mockPublishEndpoint.Verify(pub => pub.Publish(
                 It.Is<TaskDeletedEvent>(e => e.TaskId == taskId),
-                default),
+                _cancellationToken),
                 Times.Once);
         }
 
@@ -341,7 +342,7 @@ namespace TaskManagement.Tests.Application
         public async Task DeleteTaskAsync_WithEmptyId_ShouldThrowArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.DeleteTaskAsync(Guid.Empty));
+            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.DeleteTaskAsync(Guid.Empty, _cancellationToken));
         }
 
         [Fact]
@@ -350,18 +351,18 @@ namespace TaskManagement.Tests.Application
             // Arrange
             var taskId = Guid.NewGuid();
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync((Domain.Entities.Task)null);
 
             // Act
-            var result = await _taskService.DeleteTaskAsync(taskId);
+            var result = await _taskService.DeleteTaskAsync(taskId, _cancellationToken);
 
             // Assert
             Assert.False(result);
 
-            _mockTaskRepository.Verify(repo => repo.DeleteAsync(taskId), Times.Never);
-            _mockPublishEndpoint.Verify(pub => pub.Publish(It.IsAny<TaskDeletedEvent>(), default), Times.Never);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+            _mockTaskRepository.Verify(repo => repo.DeleteAsync(taskId, _cancellationToken), Times.Never);
+            _mockPublishEndpoint.Verify(pub => pub.Publish(It.IsAny<TaskDeletedEvent>(), _cancellationToken), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Never);
         }
 
         [Fact]
@@ -371,18 +372,40 @@ namespace TaskManagement.Tests.Application
             var taskId = Guid.NewGuid();
             var existingTask = new Domain.Entities.Task("Test Task", "Description");
 
-            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, _cancellationToken))
                 .ReturnsAsync(existingTask);
 
-            _mockTaskRepository.Setup(repo => repo.DeleteAsync(taskId))
+            _mockTaskRepository.Setup(repo => repo.DeleteAsync(taskId, _cancellationToken))
                 .ThrowsAsync(new Exception("Database error"));
 
             // Act & Assert
-            await Assert.ThrowsAsync<ServiceException>(() => _taskService.DeleteTaskAsync(taskId));
+            await Assert.ThrowsAsync<ServiceException>(() => _taskService.DeleteTaskAsync(taskId, _cancellationToken));
 
-            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(), Times.Once);
-            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(_cancellationToken), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(_cancellationToken), Times.Never);
+        }
+
+        [Fact]
+        public async Task Operations_WithCancelledToken_ShouldPropagateCancellation()
+        {
+            // Arrange
+            var taskId = Guid.NewGuid();
+            var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            _mockTaskRepository.Setup(repo => repo.GetAllAsync(cts.Token))
+                .ThrowsAsync(new OperationCanceledException());
+
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId, cts.Token))
+                .ThrowsAsync(new OperationCanceledException());
+
+            // Act & Assert
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                _taskService.GetAllTasksAsync(cts.Token));
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                _taskService.GetTaskByIdAsync(taskId, cts.Token));
         }
     }
 }

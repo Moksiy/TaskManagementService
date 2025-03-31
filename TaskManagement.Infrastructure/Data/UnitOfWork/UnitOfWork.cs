@@ -1,5 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 using TaskManagement.Infrastructure.Data.Context;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
 
@@ -37,19 +40,19 @@ namespace TaskManagement.Infrastructure.Data.UnitOfWork
         }
 
         /// <inheritdoc />
-        public async Task BeginTransactionAsync()
+        public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogDebug("Beginning a new database transaction");
-            _transaction = await _dbContext.Database.BeginTransactionAsync();
+            _transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         }
 
         /// <inheritdoc />
-        public async Task CommitTransactionAsync()
+        public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 _logger.LogDebug("Committing database transaction");
-                await _transaction?.CommitAsync();
+                await _transaction?.CommitAsync(cancellationToken);
             }
             finally
             {
@@ -58,12 +61,12 @@ namespace TaskManagement.Infrastructure.Data.UnitOfWork
         }
 
         /// <inheritdoc />
-        public async Task RollbackTransactionAsync()
+        public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 _logger.LogDebug("Rolling back database transaction");
-                await _transaction?.RollbackAsync();
+                await _transaction?.RollbackAsync(cancellationToken);
             }
             finally
             {
@@ -72,10 +75,10 @@ namespace TaskManagement.Infrastructure.Data.UnitOfWork
         }
 
         /// <inheritdoc />
-        public async Task<int> SaveChangesAsync()
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogDebug("Saving changes to database");
-            return await _dbContext.SaveChangesAsync();
+            return await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private async Task DisposeTransactionAsync()

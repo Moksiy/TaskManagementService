@@ -8,32 +8,37 @@
         /// <summary>
         /// Gets all tasks
         /// </summary>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>List of all tasks</returns>
-        Task<IEnumerable<Domain.Entities.Task>> GetAllAsync();
+        Task<IEnumerable<Domain.Entities.Task>> GetAllAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets a task by its ID
         /// </summary>
         /// <param name="id">Task ID</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task with the specified ID, or null if not found</returns>
-        Task<Domain.Entities.Task> GetByIdAsync(Guid id);
+        Task<Domain.Entities.Task> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Adds a new task
         /// </summary>
         /// <param name="task">Task to add</param>
-        Task AddAsync(Domain.Entities.Task task);
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task AddAsync(Domain.Entities.Task task, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Updates an existing task
         /// </summary>
         /// <param name="task">Task to update</param>
-        Task UpdateAsync(Domain.Entities.Task task);
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task UpdateAsync(Domain.Entities.Task task, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Deletes a task
         /// </summary>
         /// <param name="id">ID of the task to delete</param>
-        Task DeleteAsync(Guid id);
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }
