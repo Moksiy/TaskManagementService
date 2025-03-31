@@ -1,18 +1,22 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Application.DTOs.Mapping;
+using TaskManagement.Application.Exceptions;
 using TaskManagement.Application.Services;
 using TaskManagement.Domain.Events;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
+using TaskManagement.Infrastructure.Data.UnitOfWork;
 using Task = System.Threading.Tasks.Task;
 
 namespace TaskManagement.Tests.Application
 {
     public class TaskServiceTests
     {
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ITaskRepository> _mockTaskRepository;
         private readonly Mock<IPublishEndpoint> _mockPublishEndpoint;
         private readonly Mock<ILogger<TaskService>> _mockLogger;
@@ -21,16 +25,21 @@ namespace TaskManagement.Tests.Application
 
         public TaskServiceTests()
         {
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockTaskRepository = new Mock<ITaskRepository>();
             _mockPublishEndpoint = new Mock<IPublishEndpoint>();
             _mockLogger = new Mock<ILogger<TaskService>>();
+
+            // Setup UnitOfWork to return the mocked repository
+            _mockUnitOfWork.Setup(uow => uow.TaskRepository).Returns(_mockTaskRepository.Object);
+
             _mapper = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile<TaskMappingProfile>();
             }).CreateMapper();
 
             _taskService = new TaskService(
-                _mockTaskRepository.Object,
+                _mockUnitOfWork.Object,
                 _mockPublishEndpoint.Object,
                 _mockLogger.Object,
                 _mapper);
@@ -78,6 +87,16 @@ namespace TaskManagement.Tests.Application
         }
 
         [Fact]
+        public async Task GetTaskByIdAsync_WithEmptyId_ShouldThrowArgumentException()
+        {
+            // Arrange
+            var taskId = Guid.Empty;
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.GetTaskByIdAsync(taskId));
+        }
+
+        [Fact]
         public async Task GetTaskByIdAsync_WithNonExistingId_ShouldReturnNull()
         {
             // Arrange
@@ -117,6 +136,9 @@ namespace TaskManagement.Tests.Application
             Assert.Equal(createTaskDto.Description, result.Description);
 
             _mockTaskRepository.Verify(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>()), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Once);
 
             _mockPublishEndpoint.Verify(pub => pub.Publish(
                 It.Is<TaskCreatedEvent>(e =>
@@ -124,6 +146,48 @@ namespace TaskManagement.Tests.Application
                     e.Description == createTaskDto.Description),
                 default),
                 Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateTaskAsync_WithNullDto_ShouldThrowArgumentNullException()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _taskService.CreateTaskAsync(null));
+        }
+
+        [Fact]
+        public async Task CreateTaskAsync_WithEmptyTitle_ShouldThrowValidationException()
+        {
+            // Arrange
+            var createTaskDto = new CreateTaskDto
+            {
+                Title = "",
+                Description = "Description"
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ValidationException>(() => _taskService.CreateTaskAsync(createTaskDto));
+        }
+
+        [Fact]
+        public async Task CreateTaskAsync_WithRepositoryError_ShouldRollbackAndThrow()
+        {
+            // Arrange
+            var createTaskDto = new CreateTaskDto
+            {
+                Title = "New Task",
+                Description = "New Description"
+            };
+
+            _mockTaskRepository.Setup(repo => repo.AddAsync(It.IsAny<Domain.Entities.Task>()))
+                .ThrowsAsync(new Exception("Database error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ServiceException>(() => _taskService.CreateTaskAsync(createTaskDto));
+
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
         }
 
         [Fact]
@@ -156,11 +220,37 @@ namespace TaskManagement.Tests.Application
             Assert.Equal(updateTaskDto.Status, result.Status);
 
             _mockTaskRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Once);
 
             _mockPublishEndpoint.Verify(pub => pub.Publish(
                 It.IsAny<TaskUpdatedEvent>(),
                 default),
                 Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateTaskAsync_WithEmptyId_ShouldThrowArgumentException()
+        {
+            // Arrange
+            var updateTaskDto = new UpdateTaskDto
+            {
+                Title = "Updated Task"
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.UpdateTaskAsync(Guid.Empty, updateTaskDto));
+        }
+
+        [Fact]
+        public async Task UpdateTaskAsync_WithNullDto_ShouldThrowArgumentNullException()
+        {
+            // Arrange
+            var taskId = Guid.NewGuid();
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _taskService.UpdateTaskAsync(taskId, null));
         }
 
         [Fact]
@@ -186,6 +276,35 @@ namespace TaskManagement.Tests.Application
 
             _mockTaskRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()), Times.Never);
             _mockPublishEndpoint.Verify(pub => pub.Publish(It.IsAny<TaskUpdatedEvent>(), default), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateTaskAsync_WithRepositoryError_ShouldRollbackAndThrow()
+        {
+            // Arrange
+            var taskId = Guid.NewGuid();
+            var updateTaskDto = new UpdateTaskDto
+            {
+                Title = "Updated Task",
+                Description = "Updated Description",
+                Status = "Completed"
+            };
+
+            var existingTask = new Domain.Entities.Task("Original Task", "Original Description");
+
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+                .ReturnsAsync(existingTask);
+
+            _mockTaskRepository.Setup(repo => repo.UpdateAsync(It.IsAny<Domain.Entities.Task>()))
+                .ThrowsAsync(new Exception("Database error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ServiceException>(() => _taskService.UpdateTaskAsync(taskId, updateTaskDto));
+
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
         }
 
         [Fact]
@@ -208,11 +327,21 @@ namespace TaskManagement.Tests.Application
             Assert.True(result);
 
             _mockTaskRepository.Verify(repo => repo.DeleteAsync(taskId), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Once);
 
             _mockPublishEndpoint.Verify(pub => pub.Publish(
                 It.Is<TaskDeletedEvent>(e => e.TaskId == taskId),
                 default),
                 Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteTaskAsync_WithEmptyId_ShouldThrowArgumentException()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() => _taskService.DeleteTaskAsync(Guid.Empty));
         }
 
         [Fact]
@@ -232,6 +361,28 @@ namespace TaskManagement.Tests.Application
 
             _mockTaskRepository.Verify(repo => repo.DeleteAsync(taskId), Times.Never);
             _mockPublishEndpoint.Verify(pub => pub.Publish(It.IsAny<TaskDeletedEvent>(), default), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteTaskAsync_WithRepositoryError_ShouldRollbackAndThrow()
+        {
+            // Arrange
+            var taskId = Guid.NewGuid();
+            var existingTask = new Domain.Entities.Task("Test Task", "Description");
+
+            _mockTaskRepository.Setup(repo => repo.GetByIdAsync(taskId))
+                .ReturnsAsync(existingTask);
+
+            _mockTaskRepository.Setup(repo => repo.DeleteAsync(taskId))
+                .ThrowsAsync(new Exception("Database error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ServiceException>(() => _taskService.DeleteTaskAsync(taskId));
+
+            _mockUnitOfWork.Verify(uow => uow.BeginTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.RollbackTransactionAsync(), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.CommitTransactionAsync(), Times.Never);
         }
     }
 }

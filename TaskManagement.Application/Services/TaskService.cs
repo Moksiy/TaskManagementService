@@ -1,11 +1,12 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using TaskManagement.Application.DTOs;
+using TaskManagement.Application.Exceptions;
 using TaskManagement.Application.Services.Interfaces;
-using TaskManagement.Domain;
 using TaskManagement.Domain.Events;
-using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
+using TaskManagement.Infrastructure.Data.UnitOfWork;
 
 namespace TaskManagement.Application.Services
 {
@@ -14,7 +15,7 @@ namespace TaskManagement.Application.Services
     /// </summary>
     public class TaskService : ITaskService
     {
-        private readonly ITaskRepository _taskRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly ILogger<TaskService> _logger;
         private readonly IMapper _mapper;
@@ -22,16 +23,17 @@ namespace TaskManagement.Application.Services
         /// <summary>
         /// Creates a new TaskService
         /// </summary>
-        /// <param name="taskRepository">Task repository</param>
+        /// <param name="unitOfWork">Unit of work for transaction management</param>
         /// <param name="publishEndpoint">Message broker publish endpoint</param>
         /// <param name="logger">Logger</param>
+        /// <param name="mapper">Object mapper</param>
         public TaskService(
-            ITaskRepository taskRepository,
+            IUnitOfWork unitOfWork,
             IPublishEndpoint publishEndpoint,
             ILogger<TaskService> logger,
             IMapper mapper)
         {
-            _taskRepository = taskRepository ?? throw new ArgumentNullException(nameof(taskRepository));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _publishEndpoint = publishEndpoint ?? throw new ArgumentNullException(nameof(publishEndpoint));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -41,94 +43,181 @@ namespace TaskManagement.Application.Services
         public async Task<IEnumerable<TaskDto>> GetAllTasksAsync()
         {
             _logger.LogInformation("Getting all tasks");
-            var tasks = await _taskRepository.GetAllAsync();
+            var tasks = await _unitOfWork.TaskRepository.GetAllAsync();
             return _mapper.Map<IEnumerable<TaskDto>>(tasks);
         }
 
         /// <inheritdoc />
-        public async Task<TaskDto> GetTaskByIdAsync(Guid id)
+        public async Task<TaskDto?> GetTaskByIdAsync(Guid id)
         {
+            if (id == Guid.Empty)
+            {
+                throw new ArgumentException("Task ID cannot be empty", nameof(id));
+            }
+
             _logger.LogInformation("Getting task with ID: {TaskId}", id);
-            var task = await _taskRepository.GetByIdAsync(id);
-            return  _mapper.Map<TaskDto>(task);
+            var task = await _unitOfWork.TaskRepository.GetByIdAsync(id);
+
+            // Return null if task not found instead of throwing exception
+            if (task == null)
+            {
+                _logger.LogWarning("Task with ID {TaskId} not found", id);
+                return null;
+            }
+
+            return _mapper.Map<TaskDto>(task);
         }
 
         /// <inheritdoc />
         public async Task<TaskDto> CreateTaskAsync(CreateTaskDto createTaskDto)
         {
+            if (createTaskDto == null)
+            {
+                throw new ArgumentNullException(nameof(createTaskDto), "Task creation data cannot be null");
+            }
+
+            // Validate title is not empty
+            if (string.IsNullOrWhiteSpace(createTaskDto.Title))
+            {
+                throw new ValidationException("Task title cannot be empty");
+            }
+
             _logger.LogInformation("Creating new task with title: {TaskTitle}", createTaskDto.Title);
 
-            var task = new Domain.Entities.Task(createTaskDto.Title, createTaskDto.Description);
-            await _taskRepository.AddAsync(task);
+            try
+            {
+                // Begin transaction
+                await _unitOfWork.BeginTransactionAsync();
 
-            // Publish event to message broker
-            await _publishEndpoint.Publish(new TaskCreatedEvent(
-                task.Id,
-                task.Title,
-                task.Description
-            ));
-            return _mapper.Map<TaskDto>(task);
+                var task = new Domain.Entities.Task(createTaskDto.Title, createTaskDto.Description);
+                await _unitOfWork.TaskRepository.AddAsync(task);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Publish event to message broker
+                await _publishEndpoint.Publish(new TaskCreatedEvent(
+                    task.Id,
+                    task.Title,
+                    task.Description
+                ));
+
+                // Commit transaction
+                await _unitOfWork.CommitTransactionAsync();
+                return _mapper.Map<TaskDto>(task);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error creating task: {Message}", ex.Message);
+                throw new ServiceException("Failed to create task", ex);
+            }
         }
 
         /// <inheritdoc />
-        public async Task<TaskDto> UpdateTaskAsync(Guid id, UpdateTaskDto updateTaskDto)
+        public async Task<TaskDto?> UpdateTaskAsync(Guid id, UpdateTaskDto updateTaskDto)
         {
+            if (id == Guid.Empty)
+            {
+                throw new ArgumentException("Task ID cannot be empty", nameof(id));
+            }
+
+            if (updateTaskDto == null)
+            {
+                throw new ArgumentNullException(nameof(updateTaskDto), "Task update data cannot be null");
+            }
+
             _logger.LogInformation("Updating task with ID: {TaskId}", id);
 
-            var task = await _taskRepository.GetByIdAsync(id);
-            if (task == null)
+            try
             {
-                _logger.LogWarning("Task with ID {TaskId} not found for update", id);
-                return null;
-            }
+                // Begin transaction
+                await _unitOfWork.BeginTransactionAsync();
 
-            // Update task properties if provided
-            if (!string.IsNullOrWhiteSpace(updateTaskDto.Title))
+                var task = await _unitOfWork.TaskRepository.GetByIdAsync(id);
+                if (task == null)
+                {
+                    _logger.LogWarning("Task with ID {TaskId} not found for update", id);
+                    return null;
+                }
+
+                // Update task properties if provided
+                if (!string.IsNullOrWhiteSpace(updateTaskDto.Title))
+                {
+                    task.UpdateTitle(updateTaskDto.Title);
+                }
+
+                // Handle null description differently - it can be explicitly set to null
+                if (updateTaskDto.Description != null)
+                {
+                    task.UpdateDescription(updateTaskDto.Description);
+                }
+
+                if (!string.IsNullOrWhiteSpace(updateTaskDto.Status) &&
+                    Enum.TryParse<Domain.Enums.TaskStatus>(updateTaskDto.Status, true, out var status))
+                {
+                    task.UpdateStatus(status);
+                }
+
+                await _unitOfWork.TaskRepository.UpdateAsync(task);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Publish event to message broker
+                await _publishEndpoint.Publish(new TaskUpdatedEvent(
+                    task.Id,
+                    task.Title,
+                    task.Description,
+                    task.Status
+                ));
+
+                // Commit transaction
+                await _unitOfWork.CommitTransactionAsync();
+                return _mapper.Map<TaskDto>(task);
+            }
+            catch (Exception ex)
             {
-                task.UpdateTitle(updateTaskDto.Title);
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error updating task: {Message}", ex.Message);
+                throw new ServiceException("Failed to update task", ex);
             }
-
-            if (updateTaskDto.Description != null)
-            {
-                task.UpdateDescription(updateTaskDto.Description);
-            }
-
-            if (!string.IsNullOrWhiteSpace(updateTaskDto.Status) &&
-                Enum.TryParse<Domain.Enums.TaskStatus>(updateTaskDto.Status, true, out var status))
-            {
-                task.UpdateStatus(status);
-            }
-
-            await _taskRepository.UpdateAsync(task);
-
-            // Publish event to message broker
-            await _publishEndpoint.Publish(new TaskUpdatedEvent(
-                task.Id,
-                task.Title,
-                task.Description,
-                task.Status
-            ));
-            return _mapper.Map<TaskDto>(task);
         }
 
         /// <inheritdoc />
         public async Task<bool> DeleteTaskAsync(Guid id)
         {
-            _logger.LogInformation("Deleting task with ID: {TaskId}", id);
-
-            var task = await _taskRepository.GetByIdAsync(id);
-            if (task == null)
+            if (id == Guid.Empty)
             {
-                _logger.LogWarning("Task with ID {TaskId} not found for deletion", id);
-                return false;
+                throw new ArgumentException("Task ID cannot be empty", nameof(id));
             }
 
-            await _taskRepository.DeleteAsync(id);
+            _logger.LogInformation("Deleting task with ID: {TaskId}", id);
 
-            // Publish event to message broker
-            await _publishEndpoint.Publish(new TaskDeletedEvent(id));
+            try
+            {
+                // Begin transaction
+                await _unitOfWork.BeginTransactionAsync();
 
-            return true;
+                var task = await _unitOfWork.TaskRepository.GetByIdAsync(id);
+                if (task == null)
+                {
+                    _logger.LogWarning("Task with ID {TaskId} not found for deletion", id);
+                    return false;
+                }
+
+                await _unitOfWork.TaskRepository.DeleteAsync(id);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Publish event to message broker
+                await _publishEndpoint.Publish(new TaskDeletedEvent(id));
+
+                // Commit transaction
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error deleting task: {Message}", ex.Message);
+                throw new ServiceException("Failed to delete task", ex);
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ using TaskManagement.Infrastructure.Data.Repositories;
 using TaskManagement.Application.Services.Interfaces;
 using TaskManagement.Infrastructure.Data.Context;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
+using TaskManagement.Infrastructure.Data.UnitOfWork;
 using AutoMapper;
 using TaskManagement.Application.DTOs.Mapping;
 using TaskManagement.Application.DTOs;
@@ -41,7 +42,11 @@ var connectionString = $"Host={postgresHost};Port={postgresPort};Database={postg
 services.AddDbContext<TaskManagementDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Register repositories and unit of work
 services.AddScoped<ITaskRepository, TaskRepository>();
+services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Register application services
 services.AddScoped<ITaskService, TaskService>();
 
 // Register validators
