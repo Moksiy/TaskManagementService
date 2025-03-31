@@ -34,6 +34,9 @@ namespace TaskManagement.Infrastructure.Data.Context
 
                 entity.HasKey(e => e.Id);
 
+                entity.HasIndex(e => e.Id)
+                      .IsUnique();
+
                 entity.Property(e => e.Title)
                       .IsRequired()
                       .HasMaxLength(200);
