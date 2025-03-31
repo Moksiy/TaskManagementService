@@ -113,10 +113,37 @@ namespace TaskManagement.Domain.Entities
         /// Updates the status of the task
         /// </summary>
         /// <param name="status">New status</param>
+        /// <exception cref="ArgumentException">Thrown when status is not a valid TaskStatus value</exception>
         public void UpdateStatus(TaskStatus status)
         {
+            // Validate that the status is a defined enum value
+            if (!Enum.IsDefined(typeof(TaskStatus), status))
+            {
+                throw new ArgumentException($"Invalid task status value: {status}", nameof(status));
+            }
+
             Status = status;
             UpdatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Updates the status of the task using a string representation
+        /// </summary>
+        /// <param name="statusString">String representation of the status</param>
+        /// <exception cref="ArgumentException">Thrown when statusString cannot be parsed to a valid TaskStatus</exception>
+        public void UpdateStatus(string statusString)
+        {
+            if (string.IsNullOrWhiteSpace(statusString))
+            {
+                throw new ArgumentException("Status cannot be empty", nameof(statusString));
+            }
+
+            if (!Enum.TryParse<TaskStatus>(statusString, true, out var status))
+            {
+                throw new ArgumentException($"Invalid status value: {statusString}. Valid values are: {string.Join(", ", Enum.GetNames(typeof(TaskStatus)))}", nameof(statusString));
+            }
+
+            UpdateStatus(status);
         }
     }
 }
