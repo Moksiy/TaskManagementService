@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using MassTransit;
+﻿using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TaskManagement.Application.DTOs;
 using TaskManagement.Application.Services;
-using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Events;
 using TaskManagement.Infrastructure.Data.Repositories.Interfaces;
-using Xunit;
 using Task = System.Threading.Tasks.Task;
 
 namespace TaskManagement.Tests.Application
