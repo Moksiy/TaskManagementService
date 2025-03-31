@@ -28,7 +28,10 @@ namespace TaskManagement.Infrastructure.Data.Repositories
         public async Task<IEnumerable<Domain.Entities.Task>> GetAllAsync()
         {
             _logger.LogDebug("Getting all tasks from database");
-            return await _dbContext.Tasks.ToListAsync();
+            return await _dbContext.Tasks
+                .AsNoTracking()
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
         }
 
         /// <inheritdoc />
@@ -41,6 +44,9 @@ namespace TaskManagement.Infrastructure.Data.Repositories
         /// <inheritdoc />
         public async Task AddAsync(Domain.Entities.Task task)
         {
+            if (task == null)
+                throw new ArgumentNullException(nameof(task));
+
             _logger.LogDebug("Adding new task with ID: {TaskId} to database", task.Id);
             await _dbContext.Tasks.AddAsync(task);
             await _dbContext.SaveChangesAsync();
@@ -49,6 +55,9 @@ namespace TaskManagement.Infrastructure.Data.Repositories
         /// <inheritdoc />
         public async Task UpdateAsync(Domain.Entities.Task task)
         {
+            if (task == null)
+                throw new ArgumentNullException(nameof(task));
+
             _logger.LogDebug("Updating task with ID: {TaskId} in database", task.Id);
             _dbContext.Tasks.Update(task);
             await _dbContext.SaveChangesAsync();
@@ -58,6 +67,7 @@ namespace TaskManagement.Infrastructure.Data.Repositories
         public async Task DeleteAsync(Guid id)
         {
             _logger.LogDebug("Deleting task with ID: {TaskId} from database", id);
+
             var task = await _dbContext.Tasks.FindAsync(id);
             if (task != null)
             {

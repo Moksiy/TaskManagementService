@@ -45,10 +45,18 @@ namespace TaskManagement.Domain.Entities
         /// </summary>
         /// <param name="title">Title of the task</param>
         /// <param name="description">Description of the task</param>
+        /// <exception cref="ArgumentNullException">Thrown when title is null</exception>
+        /// <exception cref="ArgumentException">Thrown when title is empty or whitespace</exception>
         public Task(string title, string description)
         {
+            if (title == null)
+                throw new ArgumentNullException(nameof(title), "Task title cannot be null");
+
+            if (string.IsNullOrWhiteSpace(title))
+                throw new ArgumentException("Task title cannot be empty or whitespace", nameof(title));
+
             Id = Guid.NewGuid();
-            Title = title ?? throw new ArgumentNullException(nameof(title));
+            Title = title;
             Description = description ?? string.Empty;
             Status = TaskStatus.New;
             CreatedAt = DateTime.UtcNow;
@@ -59,9 +67,17 @@ namespace TaskManagement.Domain.Entities
         /// Updates the title of the task
         /// </summary>
         /// <param name="title">New title</param>
+        /// <exception cref="ArgumentNullException">Thrown when title is null</exception>
+        /// <exception cref="ArgumentException">Thrown when title is empty or whitespace</exception>
         public void UpdateTitle(string title)
         {
-            Title = title ?? throw new ArgumentNullException(nameof(title));
+            if (title == null)
+                throw new ArgumentNullException(nameof(title), "Task title cannot be null");
+
+            if (string.IsNullOrWhiteSpace(title))
+                throw new ArgumentException("Task title cannot be empty or whitespace", nameof(title));
+
+            Title = title;
             UpdatedAt = DateTime.UtcNow;
         }
 
@@ -72,6 +88,24 @@ namespace TaskManagement.Domain.Entities
         public void UpdateDescription(string description)
         {
             Description = description ?? string.Empty;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Starts the task by setting its status to InProgress
+        /// </summary>
+        public void Start()
+        {
+            Status = TaskStatus.InProgress;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Completes the task by setting its status to Completed
+        /// </summary>
+        public void Complete()
+        {
+            Status = TaskStatus.Completed;
             UpdatedAt = DateTime.UtcNow;
         }
 
