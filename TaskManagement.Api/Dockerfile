@@ -13,6 +13,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["TaskManagement.Api/TaskManagement.Api.csproj", "TaskManagement.Api/"]
+COPY ["TaskManagement.Application/TaskManagement.Application.csproj", "TaskManagement.Application/"]
+COPY ["TaskManagement.Domain/TaskManagement.Domain.csproj", "TaskManagement.Domain/"]
+COPY ["TaskManagement.Infrastructure/TaskManagement.Infrastructure.csproj", "TaskManagement.Infrastructure/"]
 RUN dotnet restore "./TaskManagement.Api/TaskManagement.Api.csproj"
 COPY . .
 WORKDIR "/src/TaskManagement.Api"

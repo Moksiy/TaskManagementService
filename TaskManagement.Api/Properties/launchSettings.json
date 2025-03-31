@@ -5,7 +5,15 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "taskmanagement",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "postgres",
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5128"
@@ -15,7 +23,15 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "taskmanagement",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "postgres",
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7199;http://localhost:5128"
@@ -25,7 +41,15 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "taskmanagement",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "postgres",
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest"
       }
     },
     "Container (Dockerfile)": {
@@ -34,7 +58,15 @@
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
       "environmentVariables": {
         "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080"
+        "ASPNETCORE_HTTP_PORTS": "8080",
+        "POSTGRES_HOST": "postgres",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "taskmanagement",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "postgres",
+        "RABBITMQ_HOST": "rabbitmq",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest"
       },
       "publishAllPorts": true,
       "useSSL": true

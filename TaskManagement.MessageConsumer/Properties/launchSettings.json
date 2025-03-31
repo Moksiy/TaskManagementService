@@ -1,10 +1,23 @@
 {
   "profiles": {
     "TaskManagement.MessageConsumer": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest"
+      },
+      "dotnetRunMessages": true
     },
     "Container (Dockerfile)": {
-      "commandName": "Docker"
+      "commandName": "Docker",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "RABBITMQ_HOST": "rabbitmq",
+        "RABBITMQ_USER": "guest",
+        "RABBITMQ_PASSWORD": "guest"
+      }
     }
   }
 }

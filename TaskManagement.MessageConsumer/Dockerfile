@@ -11,6 +11,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["TaskManagement.MessageConsumer/TaskManagement.MessageConsumer.csproj", "TaskManagement.MessageConsumer/"]
+COPY ["TaskManagement.Domain/TaskManagement.Domain.csproj", "TaskManagement.Domain/"]
 RUN dotnet restore "./TaskManagement.MessageConsumer/TaskManagement.MessageConsumer.csproj"
 COPY . .
 WORKDIR "/src/TaskManagement.MessageConsumer"

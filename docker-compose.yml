@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: taskmanagement_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: taskmanagement
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskmanagement-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: taskmanagement_rabbitmq
+    ports:
+      - "5672:5672"  
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskmanagement-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskmanagement_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=taskmanagement
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+    ports:
+      - "8080:80"
+    networks:
+      - taskmanagement-network
+
+  message-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.Consumer
+    container_name: taskmanagement_consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+    networks:
+      - taskmanagement-network
+
+networks:
+  taskmanagement-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
